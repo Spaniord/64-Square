@@ -1,0 +1,762 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>64-Square: Tribes • Clans • Genes</title>
+  <style>
+    :root{
+      --bg:#0b1020; --panel:#0f1733; --card:#141f44; --text:#e8eeff; --muted:#9bb0ff;
+      --accent:#7aa2ff; --good:#34d399; --warn:#fbbf24; --bad:#fb7185;
+    }
+    *{box-sizing:border-box; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;}
+    body{margin:0; background:radial-gradient(1200px 800px at 20% 10%, #172554, var(--bg)); color:var(--text);}
+    a{color:var(--accent)}
+    .wrap{max-width:1100px; margin:0 auto; padding:20px;}
+    .top{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;}
+    .brand{display:flex; align-items:baseline; gap:10px;}
+    .brand h1{margin:0; font-size:22px; letter-spacing:.4px;}
+    .brand .tag{font-size:12px; color:var(--muted); opacity:.95;}
+    .pillrow{display:flex; gap:10px; flex-wrap:wrap;}
+    .pill{background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); padding:6px 10px; border-radius:999px; font-size:12px; color:#dbe4ff;}
+
+    .panel{margin-top:16px; background:rgba(15,23,51,.75); border:1px solid rgba(255,255,255,.12); border-radius:18px; padding:16px; backdrop-filter: blur(10px);}
+    .grid{display:grid; grid-template-columns: repeat(4, 1fr); gap:12px;}
+    @media (max-width: 850px){ .grid{grid-template-columns: repeat(2, 1fr);} }
+
+    .card{background:rgba(20,31,68,.9); border:1px solid rgba(255,255,255,.14); border-radius:16px; padding:14px; cursor:pointer; transition: transform .12s ease, border-color .12s ease, background .12s ease; min-height:106px; display:flex; flex-direction:column; justify-content:space-between;}
+    .card:hover{transform: translateY(-2px); border-color: rgba(122,162,255,.65);}
+    .card.sel{border-color: rgba(52,211,153,.9); box-shadow: 0 0 0 2px rgba(52,211,153,.25) inset;}
+    .card h3{margin:0; font-size:15px;}
+    .card p{margin:8px 0 0; font-size:12px; color:rgba(232,238,255,.82); line-height:1.25;}
+
+    .row{display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;}
+    .btn{appearance:none; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:var(--text); padding:10px 12px; border-radius:12px; cursor:pointer; font-weight:600; transition: background .12s ease, transform .12s ease, border-color .12s ease;}
+    .btn:hover{background:rgba(255,255,255,.10); border-color:rgba(122,162,255,.7)}
+    .btn:active{transform: translateY(1px)}
+    .btn.primary{background: rgba(122,162,255,.18); border-color: rgba(122,162,255,.55)}
+    .btn.primary:hover{background: rgba(122,162,255,.25)}
+    .btn.danger{background: rgba(251,113,133,.12); border-color: rgba(251,113,133,.5)}
+
+    .stage{display:none;}
+    .stage.active{display:block;}
+    .stage h2{margin:0 0 10px; font-size:18px;}
+    .help{color:rgba(232,238,255,.78); font-size:13px; line-height:1.35; margin:0 0 12px;}
+
+    /* Arena */
+    .arena{display:grid; grid-template-columns: 1.15fr .85fr; gap:12px; align-items:start;}
+    @media (max-width: 980px){ .arena{grid-template-columns:1fr;} }
+
+    #game{width:100%; aspect-ratio: 16/10; background: radial-gradient(800px 500px at 40% 35%, #0f1b3f, #070b17); border-radius:18px; border:1px solid rgba(255,255,255,.12); display:block;}
+    .hud{background:rgba(20,31,68,.75); border:1px solid rgba(255,255,255,.12); border-radius:18px; padding:14px;}
+    .hud h3{margin:0 0 8px; font-size:15px;}
+    .kv{display:grid; grid-template-columns: 120px 1fr; gap:6px 10px; font-size:12px; color:rgba(232,238,255,.85)}
+    .kv b{color:var(--muted); font-weight:700;}
+    .bar{height:10px; border-radius:999px; background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.10); overflow:hidden;}
+    .bar > i{display:block; height:100%; width:50%; background: linear-gradient(90deg, rgba(52,211,153,.9), rgba(122,162,255,.9));}
+    .log{margin-top:10px; max-height: 220px; overflow:auto; padding-right:6px;}
+    .log .line{font-size:12px; line-height:1.25; color:rgba(232,238,255,.85); padding:6px 0; border-bottom:1px dashed rgba(255,255,255,.10)}
+    .log .line:last-child{border-bottom:none}
+
+    .mini{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
+    .badge{font-size:12px; padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06);}
+    .badge.good{border-color: rgba(52,211,153,.45); background:rgba(52,211,153,.10)}
+    .badge.warn{border-color: rgba(251,191,36,.45); background:rgba(251,191,36,.10)}
+    .badge.bad{border-color: rgba(251,113,133,.45); background:rgba(251,113,133,.10)}
+
+    .footer{margin-top:16px; font-size:12px; color:rgba(232,238,255,.7)}
+    .kbd{display:inline-block; padding:2px 6px; border-radius:6px; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); font-weight:700; font-size:11px;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <h1>64-Square</h1>
+        <div class="tag">4 choices → 4 choices → 4 choices = <b>64</b> builds</div>
+      </div>
+      <div class="pillrow">
+        <div class="pill">Player build: <span id="pillBuild">—</span></div>
+        <div class="pill">Affinity: <span id="pillAff">—</span></div>
+      </div>
+    </div>
+
+    <!-- STAGE 1: Tribe -->
+    <section class="panel stage active" id="stage-tribe">
+      <div class="row">
+        <div>
+          <h2>Choose your Tribe (¼)</h2>
+          <p class="help">Your tribe sets your core doctrine and how you *tend* to align in the arena. Tribes are the broadest grouping.</p>
+        </div>
+        <div class="row">
+          <button class="btn" id="btnRandomTribe">Random</button>
+          <button class="btn primary" id="btnTribeNext" disabled>Next →</button>
+        </div>
+      </div>
+      <div class="grid" id="tribeGrid"></div>
+    </section>
+
+    <!-- STAGE 2: Clan -->
+    <section class="panel stage" id="stage-clan">
+      <div class="row">
+        <div>
+          <h2>Choose your Clan (½)</h2>
+          <p class="help">Clans are mid-level cultures inside a tribe. They tilt your stats and your coalition tendencies.</p>
+        </div>
+        <div class="row">
+          <button class="btn" id="btnBackToTribe">← Back</button>
+          <button class="btn" id="btnRandomClan">Random</button>
+          <button class="btn primary" id="btnClanNext" disabled>Next →</button>
+        </div>
+      </div>
+      <div class="grid" id="clanGrid"></div>
+    </section>
+
+    <!-- STAGE 3: Gene -->
+    <section class="panel stage" id="stage-gene">
+      <div class="row">
+        <div>
+          <h2>Choose your Gene (¾)</h2>
+          <p class="help">Genes are your micro-traits. They sharpen probabilities in battle and affect movement/vision in the open world.</p>
+        </div>
+        <div class="row">
+          <button class="btn" id="btnBackToClan">← Back</button>
+          <button class="btn" id="btnRandomGene">Random</button>
+          <button class="btn primary" id="btnDeploy" disabled>Deploy to Arena</button>
+        </div>
+      </div>
+      <div class="grid" id="geneGrid"></div>
+    </section>
+
+    <!-- STAGE 4: Arena -->
+    <section class="panel stage" id="stage-arena">
+      <div class="row" style="margin-bottom:12px;">
+        <div>
+          <h2>Arena (100%)</h2>
+          <p class="help">
+            Move with <span class="kbd">WASD</span> / <span class="kbd">Arrow Keys</span>. Touch opponents to resolve a probability battle.
+            Same tribe = likely ally, same clan = stronger ally, same gene = strongest ally. Different tribe → hostile.
+          </p>
+        </div>
+        <div class="row">
+          <button class="btn" id="btnReset">New Build</button>
+          <button class="btn danger" id="btnWipeLog">Clear Log</button>
+        </div>
+      </div>
+
+      <div class="arena">
+        <canvas id="game" width="960" height="600"></canvas>
+        <div class="hud">
+          <h3>Build & Combat Model</h3>
+          <div class="kv">
+            <b>Tribe</b><span id="hudTribe">—</span>
+            <b>Clan</b><span id="hudClan">—</span>
+            <b>Gene</b><span id="hudGene">—</span>
+            <b>Combo ID</b><span id="hudId">—</span>
+            <b>HP</b>
+            <div class="bar" title="Hit Points"><i id="hpBar"></i></div>
+            <b>ATK / DEF</b><span id="hudAD">—</span>
+            <b>Speed / Vision</b><span id="hudSV">—</span>
+            <b>Alliance rule</b><span id="hudAff">—</span>
+          </div>
+
+          <div class="mini" id="miniBadges"></div>
+
+          <div class="log" id="log"></div>
+          <div class="footer">
+            <div>Opponents spawn continuously to represent the full 64 build-space.</div>
+            <div>Tip: you can farm allies for heals (+5) and fight hostiles for score.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <p class="footer">This is a minimal playable prototype. If you want, I can expand it into a real matchmaking lobby, persistent tribes, and a richer decision tree (not just 3 layers).</p>
+  </div>
+
+  <script>
+    // ----------------------
+    // Data model (4x4x4 = 64)
+    // ----------------------
+    const TRIBES = [
+      { key:'AUR', name:'Aurum',  blurb:'Order & optimization. Wins by structure and disciplined tempo.', mod:{atk:0, def:+2, spd:0, vis:+1}, hue:210 },
+      { key:'UMB', name:'Umbra',  blurb:'Stealth & disruption. Plays for fog, ambush, and misdirection.', mod:{atk:+1, def:0, spd:+1, vis:0}, hue:285 },
+      { key:'VIT', name:'Vita',   blurb:'Growth & sustain. Trades slowly, outlasts, and recovers.', mod:{atk:0, def:+1, spd:0, vis:0, hp:+12}, hue:140 },
+      { key:'IGN', name:'Ignis',  blurb:'Aggression & pressure. Turns time into damage and momentum.', mod:{atk:+2, def:0, spd:0, vis:0}, hue:20 },
+    ];
+
+    const CLANS = [
+      { key:'FOR', name:'Forge',  blurb:'Crafted kits, reliable supply lines, hardened gear.', mod:{def:+2}, tag:'Durability' },
+      { key:'LOR', name:'Lores',  blurb:'Signals, patterns, scouting, and predictive doctrines.', mod:{vis:+2}, tag:'Intel' },
+      { key:'RIV', name:'Riven',  blurb:'Mobility, flanks, opportunism, and hit-and-run.', mod:{spd:+2}, tag:'Mobility' },
+      { key:'RIT', name:'Rite',   blurb:'Ritual combat. High-risk spikes; thrives on momentum.', mod:{atk:+2}, tag:'Burst' },
+    ];
+
+    const GENES = [
+      { key:'KIN', name:'Kinetic', blurb:'Higher movement & dash recovery.', mod:{spd:+1, dash:+1}, tag:'Agility' },
+      { key:'AEG', name:'Aegis',   blurb:'Absorbs damage; better defense curve.', mod:{def:+1, guard:+1}, tag:'Armor' },
+      { key:'HEX', name:'Hexed',   blurb:'Unstable luck: higher variance in battles.', mod:{luck:+2}, tag:'Variance' },
+      { key:'SYN', name:'Synergic',blurb:'More likely to ally; better team bonuses.', mod:{ally:+2}, tag:'Cohesion' },
+    ];
+
+    // ----------------------
+    // UI helpers
+    // ----------------------
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+    function setStage(id){
+      $$('.stage').forEach(s => s.classList.remove('active'));
+      $(id).classList.add('active');
+    }
+
+    function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+
+    function pickRandom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+    function uidFor(tri, cla, gen){
+      // 0..63 stable id
+      const ti = TRIBES.findIndex(t=>t.key===tri.key);
+      const ci = CLANS.findIndex(c=>c.key===cla.key);
+      const gi = GENES.findIndex(g=>g.key===gen.key);
+      return (ti*16) + (ci*4) + gi;
+    }
+
+    // ----------------------
+    // Selection state
+    // ----------------------
+    const selection = { tribe:null, clan:null, gene:null };
+
+    function renderGrid(target, items, onPick, selectedKey){
+      const el = $(target);
+      el.innerHTML = '';
+      items.forEach(item => {
+        const c = document.createElement('div');
+        c.className = 'card' + (selectedKey===item.key ? ' sel' : '');
+        c.innerHTML = `<h3>${item.name} <span style="opacity:.7;font-size:12px;">(${item.key})</span></h3><p>${item.blurb}</p>`;
+        c.addEventListener('click', () => onPick(item));
+        el.appendChild(c);
+      });
+    }
+
+    function updatePills(){
+      const b = selection.tribe && selection.clan && selection.gene
+        ? `${selection.tribe.key}-${selection.clan.key}-${selection.gene.key}`
+        : '—';
+      $('#pillBuild').textContent = b;
+      $('#pillAff').textContent = selection.tribe ? `Tribe-first alliances (${selection.tribe.name})` : '—';
+    }
+
+    // Tribe stage
+    function pickTribe(t){
+      selection.tribe = t;
+      selection.clan = null;
+      selection.gene = null;
+      renderGrid('#tribeGrid', TRIBES, pickTribe, t.key);
+      $('#btnTribeNext').disabled = false;
+      updatePills();
+    }
+
+    // Clan stage
+    function pickClan(c){
+      selection.clan = c;
+      selection.gene = null;
+      renderGrid('#clanGrid', CLANS, pickClan, c.key);
+      $('#btnClanNext').disabled = false;
+      updatePills();
+    }
+
+    // Gene stage
+    function pickGene(g){
+      selection.gene = g;
+      renderGrid('#geneGrid', GENES, pickGene, g.key);
+      $('#btnDeploy').disabled = false;
+      updatePills();
+    }
+
+    renderGrid('#tribeGrid', TRIBES, pickTribe, null);
+
+    // Buttons
+    $('#btnRandomTribe').addEventListener('click', () => pickTribe(pickRandom(TRIBES)));
+    $('#btnTribeNext').addEventListener('click', () => {
+      renderGrid('#clanGrid', CLANS, pickClan, null);
+      $('#btnClanNext').disabled = true;
+      setStage('#stage-clan');
+    });
+
+    $('#btnBackToTribe').addEventListener('click', () => setStage('#stage-tribe'));
+    $('#btnRandomClan').addEventListener('click', () => pickClan(pickRandom(CLANS)));
+    $('#btnClanNext').addEventListener('click', () => {
+      renderGrid('#geneGrid', GENES, pickGene, null);
+      $('#btnDeploy').disabled = true;
+      setStage('#stage-gene');
+    });
+
+    $('#btnBackToClan').addEventListener('click', () => setStage('#stage-clan'));
+    $('#btnRandomGene').addEventListener('click', () => pickGene(pickRandom(GENES)));
+
+    // ----------------------
+    // Arena game
+    // ----------------------
+    const canvas = $('#game');
+    const ctx = canvas.getContext('2d');
+
+    const keys = new Set();
+    window.addEventListener('keydown', (e)=>{
+      if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D'].includes(e.key)) e.preventDefault();
+      keys.add(e.key);
+    }, {passive:false});
+    window.addEventListener('keyup', (e)=> keys.delete(e.key));
+
+    const world = {
+      w: canvas.width,
+      h: canvas.height,
+      t: 0,
+      score: 0,
+      player: null,
+      mobs: [],
+      spawnTimer: 0,
+      msg: []
+    };
+
+    function log(line){
+      const box = $('#log');
+      const div = document.createElement('div');
+      div.className = 'line';
+      div.textContent = line;
+      box.prepend(div);
+      // keep 60 lines
+      while(box.children.length > 60) box.removeChild(box.lastChild);
+    }
+
+    $('#btnWipeLog').addEventListener('click', ()=> $('#log').innerHTML = '');
+
+    function calcStats(tri, cla, gen){
+      const base = { hp: 80, atk: 6, def: 6, spd: 2.2, vis: 120, luck: 0, ally: 0 };
+      const apply = (m) => {
+        for(const [k,v] of Object.entries(m||{})) base[k] = (base[k] ?? 0) + v;
+      };
+      apply(tri.mod); apply(cla.mod); apply(gen.mod);
+
+      // Normalize a bit
+      base.hp = clamp(base.hp, 50, 120);
+      base.atk = clamp(base.atk, 3, 14);
+      base.def = clamp(base.def, 3, 14);
+      base.spd = clamp(base.spd, 1.5, 4.2);
+      base.vis = clamp(base.vis, 80, 200);
+
+      return base;
+    }
+
+    function relation(a, b){
+      // alliance/hostility rule
+      if(a.tribe.key === b.tribe.key){
+        if(a.clan.key === b.clan.key){
+          if(a.gene.key === b.gene.key) return 'kin';
+          return 'clan';
+        }
+        return 'tribe';
+      }
+      return 'hostile';
+    }
+
+    function relationBadge(rel){
+      if(rel==='kin') return {txt:'Same gene (KIN)', cls:'good'};
+      if(rel==='clan') return {txt:'Same clan (CLAN)', cls:'good'};
+      if(rel==='tribe') return {txt:'Same tribe (TRIBE)', cls:'warn'};
+      return {txt:'Different tribe (HOSTILE)', cls:'bad'};
+    }
+
+    function battleChance(p, o){
+      // Probability model: logistic-ish with bonuses.
+      // p and o are entities with stats and build.
+      const rel = relation(p, o);
+      let bonus = 0;
+      // alliances reduce chance of battle; instead become ally contact.
+      // hostiles battle.
+      if(rel === 'hostile'){
+        bonus += 0;
+      } else if(rel === 'tribe'){
+        bonus += 0.25 + (p.stats.ally*0.03);
+      } else if(rel === 'clan'){
+        bonus += 0.45 + (p.stats.ally*0.04);
+      } else if(rel === 'kin'){
+        bonus += 0.65 + (p.stats.ally*0.05);
+      }
+
+      // combat edge
+      const edge = (p.stats.atk - o.stats.def) * 0.06 + (p.stats.def - o.stats.atk) * 0.03;
+      const speed = (p.stats.spd - o.stats.spd) * 0.07;
+
+      // luck = variance not pure advantage
+      const variance = (p.stats.luck - o.stats.luck) * 0.02;
+
+      let x = 0.5 + edge + speed + variance;
+      x = clamp(x, 0.15, 0.85);
+      return { rel, allyBonus: bonus, winChance: x };
+    }
+
+    function makeEntity(build, x, y, isPlayer=false){
+      const stats = calcStats(build.tribe, build.clan, build.gene);
+      const id = uidFor(build.tribe, build.clan, build.gene);
+      const r = isPlayer ? 11 : 9;
+      return {
+        id, isPlayer,
+        tribe: build.tribe, clan: build.clan, gene: build.gene,
+        stats,
+        hp: stats.hp,
+        x, y, r,
+        vx: 0, vy: 0,
+        hue: build.tribe.hue,
+        seed: Math.random()*1e9,
+      };
+    }
+
+    function randomBuild(){
+      return { tribe: pickRandom(TRIBES), clan: pickRandom(CLANS), gene: pickRandom(GENES) };
+    }
+
+    function spawnMob(){
+      const edge = Math.random();
+      let x = 0, y = 0;
+      if(edge < .25){ x = -20; y = Math.random()*world.h; }
+      else if(edge < .50){ x = world.w+20; y = Math.random()*world.h; }
+      else if(edge < .75){ x = Math.random()*world.w; y = -20; }
+      else { x = Math.random()*world.w; y = world.h+20; }
+
+      const b = randomBuild();
+      // keep some diversity by occasionally forcing different tribe
+      if(world.player && Math.random() < 0.45){
+        const otherTribes = TRIBES.filter(t=>t.key!==world.player.tribe.key);
+        b.tribe = pickRandom(otherTribes);
+      }
+      const mob = makeEntity(b, x, y, false);
+      // simple drift
+      mob.vx = (Math.random()*2-1) * 0.9;
+      mob.vy = (Math.random()*2-1) * 0.9;
+      world.mobs.push(mob);
+    }
+
+    function deploy(){
+      const build = { tribe: selection.tribe, clan: selection.clan, gene: selection.gene };
+      world.player = makeEntity(build, world.w*0.5, world.h*0.55, true);
+      world.mobs = [];
+      world.t = 0;
+      world.score = 0;
+      world.spawnTimer = 0;
+      $('#pillBuild').textContent = `${build.tribe.key}-${build.clan.key}-${build.gene.key}`;
+      $('#pillAff').textContent = `Tribe-first alliances (${build.tribe.name})`;
+
+      // HUD
+      $('#hudTribe').textContent = `${build.tribe.name} (${build.tribe.key})`;
+      $('#hudClan').textContent = `${build.clan.name} (${build.clan.key})`;
+      $('#hudGene').textContent = `${build.gene.name} (${build.gene.key})`;
+      $('#hudId').textContent = `${uidFor(build.tribe, build.clan, build.gene)} / 63`;
+      $('#hudAD').textContent = `${world.player.stats.atk.toFixed(1)} / ${world.player.stats.def.toFixed(1)}`;
+      $('#hudSV').textContent = `${world.player.stats.spd.toFixed(2)} / ${world.player.stats.vis.toFixed(0)}px`;
+      $('#hudAff').textContent = `Same tribe = ally (stronger if clan/gene match)`;
+
+      // badges
+      const badges = $('#miniBadges');
+      badges.innerHTML='';
+      const mk = (txt, cls)=>{ const b=document.createElement('div'); b.className='badge '+cls; b.textContent=txt; badges.appendChild(b); };
+      mk(`Clan tag: ${build.clan.tag}`, 'warn');
+      mk(`Gene tag: ${build.gene.tag}`, 'warn');
+      mk(`Luck: ${world.player.stats.luck}`, world.player.stats.luck>0?'warn':'');
+      mk(`Ally: ${world.player.stats.ally}`, world.player.stats.ally>0?'good':'');
+
+      log(`Deployed build ${build.tribe.key}-${build.clan.key}-${build.gene.key} (ID ${uidFor(build.tribe, build.clan, build.gene)})`);
+
+      // seed mobs
+      for(let i=0;i<10;i++) spawnMob();
+
+      setStage('#stage-arena');
+    }
+
+    $('#btnDeploy').addEventListener('click', deploy);
+    $('#btnReset').addEventListener('click', () => {
+      selection.tribe=null; selection.clan=null; selection.gene=null;
+      renderGrid('#tribeGrid', TRIBES, pickTribe, null);
+      $('#btnTribeNext').disabled = true;
+      updatePills();
+      setStage('#stage-tribe');
+    });
+
+    // ----------------------
+    // Arena loop
+    // ----------------------
+    function draw(){
+      ctx.clearRect(0,0,world.w,world.h);
+
+      // background grid
+      ctx.save();
+      ctx.globalAlpha = 0.15;
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 1;
+      for(let x=0; x<world.w; x+=48){
+        ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,world.h); ctx.stroke();
+      }
+      for(let y=0; y<world.h; y+=48){
+        ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(world.w,y); ctx.stroke();
+      }
+      ctx.restore();
+
+      if(!world.player) return;
+
+      // vision circle
+      ctx.save();
+      ctx.globalAlpha = 0.09;
+      ctx.fillStyle = 'white';
+      ctx.beginPath();
+      ctx.arc(world.player.x, world.player.y, world.player.stats.vis, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+
+      // mobs
+      for(const m of world.mobs){
+        const rel = relation(world.player, m);
+        // only draw clearly if in vision
+        const dx = m.x - world.player.x;
+        const dy = m.y - world.player.y;
+        const d2 = dx*dx + dy*dy;
+        const inVision = d2 <= world.player.stats.vis*world.player.stats.vis;
+        if(!inVision){
+          ctx.save();
+          ctx.globalAlpha = 0.18;
+          ctx.fillStyle = 'white';
+          ctx.beginPath();
+          ctx.arc(m.x, m.y, 2, 0, Math.PI*2);
+          ctx.fill();
+          ctx.restore();
+          continue;
+        }
+
+        const color = rel==='hostile' ? `hsl(${m.hue}, 85%, 58%)` : `hsl(${m.hue}, 55%, 70%)`;
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.globalAlpha = rel==='hostile' ? 0.95 : 0.75;
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, m.r, 0, Math.PI*2);
+        ctx.fill();
+
+        // tiny outline
+        ctx.globalAlpha = 0.7;
+        ctx.strokeStyle = 'rgba(255,255,255,.35)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // marker
+        ctx.globalAlpha = 0.85;
+        ctx.fillStyle = rel==='hostile' ? 'rgba(251,113,133,.9)' : 'rgba(52,211,153,.85)';
+        ctx.fillRect(m.x-3, m.y-m.r-10, 6, 6);
+        ctx.restore();
+      }
+
+      // player
+      const p = world.player;
+      ctx.save();
+      ctx.fillStyle = `hsl(${p.hue}, 95%, 65%)`;
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.55)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // direction
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x + p.vx*10, p.y + p.vy*10);
+      ctx.stroke();
+      ctx.restore();
+
+      // score
+      ctx.save();
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = 'rgba(232,238,255,.9)';
+      ctx.font = '14px ui-sans-serif, system-ui';
+      ctx.fillText(`Score: ${world.score}`, 14, 22);
+      ctx.restore();
+    }
+
+    function update(dt){
+      if(!world.player) return;
+      world.t += dt;
+
+      // movement
+      const p = world.player;
+      let ax = 0, ay = 0;
+      const up = keys.has('w')||keys.has('W')||keys.has('ArrowUp');
+      const dn = keys.has('s')||keys.has('S')||keys.has('ArrowDown');
+      const lf = keys.has('a')||keys.has('A')||keys.has('ArrowLeft');
+      const rt = keys.has('d')||keys.has('D')||keys.has('ArrowRight');
+      if(up) ay -= 1;
+      if(dn) ay += 1;
+      if(lf) ax -= 1;
+      if(rt) ax += 1;
+      const mag = Math.hypot(ax, ay) || 1;
+      ax /= mag; ay /= mag;
+
+      const spd = p.stats.spd;
+      p.vx = ax * spd;
+      p.vy = ay * spd;
+      p.x += p.vx * dt * 60;
+      p.y += p.vy * dt * 60;
+
+      // bounds
+      p.x = clamp(p.x, 12, world.w-12);
+      p.y = clamp(p.y, 12, world.h-12);
+
+      // spawn
+      world.spawnTimer += dt;
+      const target = 0.75; // seconds
+      if(world.spawnTimer >= target){
+        world.spawnTimer = 0;
+        spawnMob();
+        // cap
+        if(world.mobs.length > 26) world.mobs.splice(0, world.mobs.length-26);
+      }
+
+      // mob drift + mild homing/avoid
+      for(const m of world.mobs){
+        const dx = p.x - m.x;
+        const dy = p.y - m.y;
+        const d = Math.hypot(dx,dy) || 1;
+        const rel = relation(p, m);
+        // Hostiles tend to approach; allies drift away slightly.
+        const k = rel==='hostile' ? 0.40 : -0.12;
+        const hx = (dx/d) * k;
+        const hy = (dy/d) * k;
+        m.vx = m.vx*0.96 + hx;
+        m.vy = m.vy*0.96 + hy;
+        const ms = clamp(m.stats.spd*0.75, 1.0, 3.4);
+        m.x += m.vx * dt * 60 * ms;
+        m.y += m.vy * dt * 60 * ms;
+      }
+
+      // collisions (battle or ally)
+      for(let i=world.mobs.length-1; i>=0; i--){
+        const m = world.mobs[i];
+        const d = Math.hypot(p.x-m.x, p.y-m.y);
+        if(d <= p.r + m.r){
+          resolveContact(p, m);
+          world.mobs.splice(i,1);
+        }
+      }
+
+      // HUD HP
+      const hpFrac = clamp(p.hp / p.stats.hp, 0, 1);
+      $('#hpBar').style.width = `${(hpFrac*100).toFixed(0)}%`;
+
+      if(p.hp <= 0){
+        log('You were eliminated. Resetting build...');
+        // soft reset
+        selection.tribe=null; selection.clan=null; selection.gene=null;
+        renderGrid('#tribeGrid', TRIBES, pickTribe, null);
+        $('#btnTribeNext').disabled = true;
+        updatePills();
+        setStage('#stage-tribe');
+        world.player = null;
+      }
+    }
+
+    function resolveContact(p, o){
+      const { rel, allyBonus, winChance } = battleChance(p, o);
+      const oId = `${o.tribe.key}-${o.clan.key}-${o.gene.key}`;
+
+      if(rel !== 'hostile'){
+        // alliance contact: chance to heal or gain score depending on depth
+        const r = Math.random();
+        const allyRoll = r < allyBonus;
+        if(allyRoll){
+          const heal = rel==='kin' ? 10 : rel==='clan' ? 8 : 5;
+          p.hp = clamp(p.hp + heal, 0, p.stats.hp);
+          world.score += rel==='kin' ? 3 : rel==='clan' ? 2 : 1;
+          const b = relationBadge(rel);
+          log(`ALLY (${b.txt}) with ${oId} → +${heal} HP, +${rel==='kin'?3:rel==='clan'?2:1} score`);
+        } else {
+          // neutral bump
+          log(`NEUTRAL contact with ${oId} (allied type: ${rel}) → no effect`);
+        }
+        return;
+      }
+
+      // Hostile battle
+      const roll = Math.random();
+      const win = roll < winChance;
+
+      // damage model with variance
+      const varP = (p.stats.luck>0) ? (Math.random()*0.6 - 0.3) : 0;
+      const varO = (o.stats.luck>0) ? (Math.random()*0.6 - 0.3) : 0;
+      const dmgToO = clamp((p.stats.atk - o.stats.def*0.55) * (1.0 + varP) + 8, 4, 22);
+      const dmgToP = clamp((o.stats.atk - p.stats.def*0.55) * (1.0 + varO) + 8, 4, 22);
+
+      if(win){
+        // you win: you still take some chip
+        p.hp -= dmgToP*0.35;
+        world.score += 4;
+        log(`WIN vs ${oId} (p=${(winChance*100).toFixed(0)}%, roll=${roll.toFixed(2)}) → +4 score, -${(dmgToP*0.35).toFixed(0)} HP`);
+      } else {
+        p.hp -= dmgToP;
+        world.score += 1; // survival credit
+        log(`LOSS vs ${oId} (p=${(winChance*100).toFixed(0)}%, roll=${roll.toFixed(2)}) → +1 score, -${dmgToP.toFixed(0)} HP`);
+      }
+
+      // small reward for engaging
+      if(Math.random() < 0.08){
+        p.hp = clamp(p.hp + 4, 0, p.stats.hp);
+        log('Adrenaline surge → +4 HP');
+      }
+    }
+
+    // Main loop
+    let last = performance.now();
+    function loop(now){
+      const dt = clamp((now-last)/1000, 0, 0.05);
+      last = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+
+    // Deploy guard
+    $('#btnDeploy').disabled = true;
+
+    // Wire deploy enable
+    const deployEnable = () => {
+      $('#btnDeploy').disabled = !(selection.tribe && selection.clan && selection.gene);
+    };
+
+    // Intercept selection pickers to also update deploy
+    const _pickTribe = pickTribe;
+    pickTribe = (t) => { _pickTribe(t); deployEnable(); };
+    const _pickClan = pickClan;
+    pickClan = (c) => { _pickClan(c); deployEnable(); };
+    const _pickGene = pickGene;
+    pickGene = (g) => { _pickGene(g); deployEnable(); };
+
+    // Re-render tribe grid with wrapped function
+    renderGrid('#tribeGrid', TRIBES, pickTribe, null);
+
+    // Button state updates
+    updatePills();
+
+    // Ensure stage buttons react to manual picks
+    const _renderTribe = () => renderGrid('#tribeGrid', TRIBES, pickTribe, selection.tribe?.key ?? null);
+    const _renderClan  = () => renderGrid('#clanGrid', CLANS, pickClan, selection.clan?.key ?? null);
+    const _renderGene  = () => renderGrid('#geneGrid', GENES, pickGene, selection.gene?.key ?? null);
+
+    // When coming back to a stage, restore selection highlight
+    $('#btnBackToTribe').addEventListener('click', () => { _renderTribe(); });
+    $('#btnBackToClan').addEventListener('click', () => { _renderClan(); });
+
+    // Deploy button enablement on navigation
+    $('#btnTribeNext').addEventListener('click', () => { _renderClan(); deployEnable(); });
+    $('#btnClanNext').addEventListener('click', () => { _renderGene(); deployEnable(); });
+
+  </script>
+</body>
+</html>
